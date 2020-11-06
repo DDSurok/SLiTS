@@ -5,17 +5,12 @@ namespace SLiTS.Api
 {
     public abstract class AFastTask
     {
-        public AFastTask(string @params, ILogger logger, IAsyncStatisticIntercepter<AFastTask> statisticIntercepter)
-        {
-            Params = @params;
-            Logger = logger;
-            StatisticIntercepter = statisticIntercepter;
-        }
-        public string Params { get; }
+        public AFastTask(ILogger logger, IAsyncStatisticIntercepter<AFastTask> statisticIntercepter)
+            => (Logger, StatisticIntercepter) = (logger, statisticIntercepter);
+        public string Params { get; set; }
         public abstract string Title { get; }
         public ILogger Logger { get; }
         public IAsyncStatisticIntercepter<AFastTask> StatisticIntercepter { get; }
-
-        public abstract Task Invoke(string query);
+        public abstract Task<Data> InvokeAsync(string query);
     }
 }

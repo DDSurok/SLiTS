@@ -2,7 +2,7 @@
 
 namespace SLiTS.Api
 {
-    class Schedule
+    public class Schedule
     {
         public DayOfWeek[] WeeklyPlan { get; set; }
         public TimeSpan BeginDailyPlan { get; set; }
