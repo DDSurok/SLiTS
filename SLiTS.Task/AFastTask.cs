@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using NLog;
 using System.Threading.Tasks;
 
 namespace SLiTS.Api

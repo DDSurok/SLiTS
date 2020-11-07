@@ -3,7 +3,7 @@ using SLiTS.Standard;
 using System;
 using System.Threading.Tasks;
 
-namespace SLiTS.Scheduler.Api
+namespace SLiTS.Scheduler
 {
     public class StatisticIntercepter<T> : IAsyncStatisticIntercepter<T> where T : AFastTask
     {
