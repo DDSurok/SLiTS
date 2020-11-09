@@ -21,7 +21,7 @@ namespace SLiTS.Scheduler.FSProvider
             throw new NotImplementedException();
         }
 
-        public override IEnumerable<(string handler, string title, string @params)> ReadFastTaskParams()
+        public override IEnumerable<(string handler, string title, string @params)> FastTaskParamsIterator()
         {
             throw new NotImplementedException();
         }

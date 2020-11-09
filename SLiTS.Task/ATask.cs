@@ -1,20 +1,24 @@
 ﻿using NLog;
+using System;
 using System.Threading.Tasks;
 
 namespace SLiTS.Api
 {
     public abstract class ATask
     {
-        public ATask(string @params, string title, ILogger logger)
+        public ATask(ILogger logger)
         {
-            Params = @params;
-            Title = title;
             Logger = logger;
         }
-        public string Params { get; }
-        public string Title { get; }
-        public ILogger Logger { get; }
-        public abstract Task Invoke(string @params);
-        public abstract Task<bool> Test(string @params);
+        public string Title { get; set; }
+        protected ILogger Logger { get; }
+        public string Params { get; set; }
+        public async Task InvokeAsync(Action continueWith)
+        {
+            await InternalInvokeAsync();
+            continueWith();
+        }
+        protected abstract Task InternalInvokeAsync();
+        public abstract Task<bool> Test();
     }
 }
