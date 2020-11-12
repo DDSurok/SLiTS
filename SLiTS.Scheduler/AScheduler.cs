@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -57,18 +58,18 @@ namespace SLiTS.Scheduler
             TaskContainer.DisposeAsync().AsTask().Wait();
             FastTaskContainer.DisposeAsync().AsTask().Wait();
         }
-        protected Dictionary<string, AFastTask> _fastTaskHandlers = new Dictionary<string, AFastTask>();
+        protected readonly Dictionary<string, AFastTask> FastTaskHandlers = new Dictionary<string, AFastTask>();
         protected IContainer TaskContainer { get; }
         protected IContainer FastTaskContainer { get; }
         protected ILogger Logger { get; }
-        ConcurrentDictionary<string, (ATask, Task)> ActiveTasks = new ConcurrentDictionary<string, (ATask, Task)>();
-        public abstract Schedule ReadAsync();
-        public abstract IEnumerable<(string handler, string title, string @params)> FastTaskParamsIterator();
-        public abstract IAsyncEnumerable<(string taskTitle, FastTaskRequest request)> FastTaskRequestIterator();
-        public abstract (string scheduleId, Schedule schedule) GetFirstScheduleTask();
-        public abstract void StartScheduleTask(string scheduleId);
-        public abstract void UpdateScheduleTask(string scheduleId, Schedule schedule);
-        public abstract void EndScheduleTask(string scheduleId);
+        protected readonly ConcurrentDictionary<string, (ATask, Task)> ActiveTasks = new ConcurrentDictionary<string, (ATask, Task)>();
+        protected abstract IEnumerable<(string handler, string title, string @params)> FastTaskParamsIterator();
+        protected abstract IAsyncEnumerable<(string taskTitle, FastTaskRequest request)> FastTaskRequestIteratorAsync(CancellationToken token);
+        protected abstract Task SaveFastTaskResponse(string taskId, Data response);
+        protected abstract (string scheduleId, Schedule schedule) GetFirstScheduleTaskFromStorage();
+        protected abstract void StartScheduleTaskInStorage(string scheduleId);
+        protected abstract void UpdateScheduleTaskInStorage(string scheduleId, Schedule schedule);
+        protected abstract void FinishScheduleTaskInStorage(string scheduleId);
         public void Initialize()
         {
             foreach ((string handler, string title, string @params) in FastTaskParamsIterator())
@@ -77,7 +78,7 @@ namespace SLiTS.Scheduler
                 {
                     AFastTask fastTask = (AFastTask)task;
                     fastTask.Params = @params;
-                    _fastTaskHandlers.Add(title, fastTask);
+                    FastTaskHandlers.Add(title, fastTask);
                 }
                 else
                 {
@@ -91,17 +92,18 @@ namespace SLiTS.Scheduler
         public void Start()
         {
             CancellationTokenSource cancelTokenSource = new CancellationTokenSource();
-            Task fastTaskScheduler = new Task(StartFastTaskScheduler, cancelTokenSource.Token);
-            Task taskScheduler = new Task(StartTaskScheduler, cancelTokenSource.Token);
+            CancellationToken token = cancelTokenSource.Token;
+            Task fastTaskScheduler = new Task(async () => await StartFastTaskSchedulerAsync(token), token);
+            Task taskScheduler = new Task(async () => await StartTaskScheduler(token), token);
             Task.WaitAll(fastTaskScheduler, taskScheduler);
         }
-        private async void StartTaskScheduler()
+        private async Task StartTaskScheduler(CancellationToken token)
         {
             Thread.Sleep(5000);
             while (true)
             {
                 Thread.Sleep(1000);
-                (string scheduleId, Schedule schedule) = GetFirstScheduleTask();
+                (string scheduleId, Schedule schedule) = GetFirstScheduleTaskFromStorage();
                 if (string.IsNullOrWhiteSpace(scheduleId))
                 {
                     Thread.Sleep(10000);
@@ -113,21 +115,22 @@ namespace SLiTS.Scheduler
                     Logger.Trace($"Schedule Info: {schedule}");
                 if (TaskContainer.TryResolve(Type.GetType(schedule.TaskHandler), out object t) && t is ATask task)
                 {
-                    StartScheduleTask(scheduleId);
+                    StartScheduleTaskInStorage(scheduleId);
                     schedule.LastRunning = DateTime.Now;
-                    UpdateScheduleTask(scheduleId, schedule);
+                    UpdateScheduleTaskInStorage(scheduleId, schedule);
                     task.Params = schedule.Parameters;
                     if (await task.Test())
                     {
                         ActiveTasks.TryAdd(scheduleId, (task, null));
-                        ActiveTasks[scheduleId]
-                            = (
-                                ActiveTasks[scheduleId].Item1,
-                                ActiveTasks[scheduleId].Item1.InvokeAsync(() => CompleteScheduleTask(scheduleId, schedule, task))
-                            );
+                        Task execTask = new Task(async () =>
+                        {
+                            await ActiveTasks[scheduleId].Item1.InvokeAsync(token);
+                            FinishScheduleTask(scheduleId, schedule, task);
+                        }, token);
+                        ActiveTasks[scheduleId] = ( ActiveTasks[scheduleId].Item1, execTask );
                         ActiveTasks[scheduleId].Item2.Start();
                     } else {
-                        CompleteScheduleTask(scheduleId, schedule, task);
+                        FinishScheduleTask(scheduleId, schedule, task);
                     }
                 } else {
                     if (Logger.IsWarnEnabled)
@@ -135,23 +138,42 @@ namespace SLiTS.Scheduler
                     if (Logger.IsDebugEnabled)
                         Logger.Debug($"Schedule Info: {schedule}");
                     schedule.Repeat = false;
-                    CompleteScheduleTask(scheduleId, schedule, null);
+                    FinishScheduleTask(scheduleId, schedule, null);
                 }
             }
         }
-        private void CompleteScheduleTask(string scheduleId, Schedule schedule, ATask task)
+        private async Task StartFastTaskSchedulerAsync(CancellationToken token)
+        {
+            await foreach((string taskTitle, FastTaskRequest request) in FastTaskRequestIteratorAsync(token))
+            {
+                if (FastTaskHandlers.ContainsKey(taskTitle))
+                {
+                    try
+                    {
+                        await SaveFastTaskResponse(request.Id, await FastTaskHandlers[taskTitle].InvokeAsync(request.Query));
+                    }
+                    catch (Exception ex)
+                    {
+                        if (Logger.IsErrorEnabled)
+                            Logger.Error(ex, @$"При выполнении задачи ""{taskTitle}"" произошла ошибка");
+                    }
+                }
+                else
+                {
+                    if (Logger.IsWarnEnabled)
+                        Logger.Warn(@$"Для задач ""{taskTitle}"" отсутствует обработчик");
+                }
+            }
+        }
+        private void FinishScheduleTask(string scheduleId, Schedule schedule, ATask task)
         {
             if (!schedule.Repeat)
                 schedule.Active = false;
             if (!(task is null))
                 schedule.Parameters = task.Params;
-            UpdateScheduleTask(scheduleId, schedule);
-            EndScheduleTask(scheduleId);
+            UpdateScheduleTaskInStorage(scheduleId, schedule);
+            FinishScheduleTaskInStorage(scheduleId);
             ActiveTasks.TryRemove(scheduleId, out _);
-        }
-        private void StartFastTaskScheduler()
-        {
-            throw new NotImplementedException();
         }
     }
 }

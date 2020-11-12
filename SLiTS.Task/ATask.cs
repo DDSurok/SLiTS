@@ -1,5 +1,5 @@
 ﻿using NLog;
-using System;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace SLiTS.Api
@@ -13,12 +13,7 @@ namespace SLiTS.Api
         public string Title { get; set; }
         protected ILogger Logger { get; }
         public string Params { get; set; }
-        public async Task InvokeAsync(Action continueWith)
-        {
-            await InternalInvokeAsync();
-            continueWith();
-        }
-        protected abstract Task InternalInvokeAsync();
+        public abstract Task InvokeAsync(CancellationToken token);
         public abstract Task<bool> Test();
     }
 }

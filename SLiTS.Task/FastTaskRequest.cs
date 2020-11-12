@@ -6,6 +6,6 @@ namespace SLiTS.Api
     {
         public string Query { get; set; }
         public string Title { get; set; }
-        public Guid Id { get; set; }
+        public string Id { get; set; }
     }
 }
