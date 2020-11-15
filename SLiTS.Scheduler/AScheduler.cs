@@ -16,7 +16,7 @@ namespace SLiTS.Scheduler
 {
     public abstract class AScheduler
     {
-        protected AScheduler(string workingDirectory)
+        protected AScheduler(string pluginDirectory)
         {
             bool TestClassImplements(Type type, Type testType)
             {
@@ -36,7 +36,7 @@ namespace SLiTS.Scheduler
             taskBuilder.RegisterModule<NLogModule>();
             ContainerBuilder fastTaskBuilder = new ContainerBuilder();
             fastTaskBuilder.RegisterModule<NLogModule>();
-            foreach (FileInfo fi in new DirectoryInfo(workingDirectory).GetFiles("*.dll"))
+            foreach (FileInfo fi in new DirectoryInfo(pluginDirectory).GetFiles("*.dll"))
             {
                 Assembly assembly = Assembly.LoadFrom(fi.FullName);
                 foreach (Type type in assembly.GetTypes()
@@ -66,8 +66,29 @@ namespace SLiTS.Scheduler
         protected abstract IEnumerable<(string handler, string title, string @params)> FastTaskParamsIterator();
         protected abstract IAsyncEnumerable<(string taskTitle, FastTaskRequest request)> FastTaskRequestIteratorAsync(CancellationToken token);
         protected abstract Task SaveFastTaskResponse(string taskId, Data response);
-        protected abstract (string scheduleId, Schedule schedule) GetFirstScheduleTaskFromStorage();
-        protected abstract void StartScheduleTaskInStorage(string scheduleId);
+        protected abstract IAsyncEnumerable<(string scheduleId, Schedule schedule, bool isRunning)> GetAllSchedulesAsync();
+        private async Task<(string scheduleId, Schedule schedule, bool isRunning)> GetFirstScheduleTaskFromStorageAsync()
+        {
+            IEnumerable<string> usingResources = new string[] { };
+            List<(string scheduleId, Schedule schedule, bool isRunning)> tasks = new List<(string scheduleId, Schedule schedule, bool isRunning)>();
+            await foreach (var item in GetAllSchedulesAsync())
+            {
+                if (item.isRunning)
+                {
+                    usingResources = usingResources.Concat(item.schedule.UsingResource).Distinct();
+                }
+                if (item.schedule.Active && item.schedule.TestInQueue())
+                {
+                    tasks.Add(item);
+                }
+            }
+            return tasks.Where(r => r.schedule.UsingResource.Intersect(usingResources).Any())
+                        .OrderByDescending(r => r.schedule.GetRealWaiting())
+                        .FirstOrDefault();
+        }
+
+
+        protected abstract Task StartScheduleTaskInStorageAsync(string scheduleId);
         protected abstract void UpdateScheduleTaskInStorage(string scheduleId, Schedule schedule);
         protected abstract void FinishScheduleTaskInStorage(string scheduleId);
         public void Initialize()
@@ -115,7 +136,7 @@ namespace SLiTS.Scheduler
                     Logger.Trace($"Schedule Info: {schedule}");
                 if (TaskContainer.TryResolve(Type.GetType(schedule.TaskHandler), out object t) && t is ATask task)
                 {
-                    StartScheduleTaskInStorage(scheduleId);
+                    StartScheduleTaskInStorageAsync(scheduleId);
                     schedule.LastRunning = DateTime.Now;
                     UpdateScheduleTaskInStorage(scheduleId, schedule);
                     task.Params = schedule.Parameters;

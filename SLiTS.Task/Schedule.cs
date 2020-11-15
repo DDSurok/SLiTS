@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 
 namespace SLiTS.Api
 {
@@ -14,5 +15,15 @@ namespace SLiTS.Api
         public string Parameters { get; set; }
         public string[] UsingResource { get; set; }
         public string TaskHandler { get; set; }
+        public bool TestInQueue()
+        {
+            DateTime now = DateTime.Now;
+            return WeeklyPlan.Contains(now.DayOfWeek) && now.TimeOfDay > BeginDailyPlan && now.TimeOfDay < EndDailyPlan;
+        }
+
+        public TimeSpan GetRealWaiting()
+        {
+            return DateTime.Now - LastRunning - MinimalElapsed;
+        }
     }
 }
