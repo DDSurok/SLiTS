@@ -86,11 +86,9 @@ namespace SLiTS.Scheduler
                         .OrderByDescending(r => r.schedule.GetRealWaiting())
                         .FirstOrDefault();
         }
-
-
         protected abstract Task StartScheduleTaskInStorageAsync(string scheduleId);
-        protected abstract void UpdateScheduleTaskInStorage(string scheduleId, Schedule schedule);
-        protected abstract void FinishScheduleTaskInStorage(string scheduleId);
+        protected abstract Task UpdateScheduleTaskInStorageAsync(string scheduleId, Schedule schedule);
+        protected abstract Task FinishScheduleTaskInStorageAsync(string scheduleId);
         public void Initialize()
         {
             foreach ((string handler, string title, string @params) in FastTaskParamsIterator())
@@ -138,7 +136,7 @@ namespace SLiTS.Scheduler
                 {
                     StartScheduleTaskInStorageAsync(scheduleId);
                     schedule.LastRunning = DateTime.Now;
-                    UpdateScheduleTaskInStorage(scheduleId, schedule);
+                    UpdateScheduleTaskInStorageAsync(scheduleId, schedule);
                     task.Params = schedule.Parameters;
                     if (await task.Test())
                     {
@@ -192,7 +190,7 @@ namespace SLiTS.Scheduler
                 schedule.Active = false;
             if (!(task is null))
                 schedule.Parameters = task.Params;
-            UpdateScheduleTaskInStorage(scheduleId, schedule);
+            UpdateScheduleTaskInStorageAsync(scheduleId, schedule);
             FinishScheduleTaskInStorage(scheduleId);
             ActiveTasks.TryRemove(scheduleId, out _);
         }

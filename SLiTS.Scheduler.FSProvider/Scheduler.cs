@@ -59,32 +59,49 @@ namespace SLiTS.Scheduler.FSProvider
             {
                 using StreamReader file = fileInfo.OpenText();
                 Schedule schedule = JsonConvert.DeserializeObject<Schedule>(await file.ReadToEndAsync());
-                string lockFile = fileInfo.FullName.Substring(0, fileInfo.FullName.Length - 5); 
+                string lockFile = fileInfo.FullName[0..^5]; 
                 yield return (fileInfo.Name, schedule, File.Exists(lockFile));
             }
         }
-
         protected override async Task StartScheduleTaskInStorageAsync(string scheduleId)
         {
             string filePath = Path.Combine(ScheduleDirectory, $"{scheduleId}.json");
             string lockPath = Path.Combine(ScheduleDirectory, $"{scheduleId}.lock");
             if (!File.Exists(filePath))
             {
-                throw new BaseScheduleException(scheduleId, "Не найдена задание");
+                throw new BaseScheduleException(scheduleId, "Не найдено задание");
             }
+            Schedule schedule = JsonConvert.DeserializeObject<Schedule>(await File.ReadAllTextAsync(filePath));
+            schedule.LastRunning = DateTime.Now;
             if (File.Exists(filePath))
             {
                 throw new BaseScheduleException(scheduleId, "Задание уже исполняется");
             }
+            await File.WriteAllTextAsync(filePath, JsonConvert.SerializeObject(schedule));
             await File.WriteAllTextAsync(lockPath, "");
         }
-        protected override void UpdateScheduleTaskInStorage(string scheduleId, Schedule schedule)
+        protected override async Task UpdateScheduleTaskInStorageAsync(string scheduleId, Schedule schedule)
         {
-            throw new NotImplementedException();
+            string filePath = Path.Combine(ScheduleDirectory, $"{scheduleId}.json");
+            if (!File.Exists(filePath))
+            {
+                throw new BaseScheduleException(scheduleId, "Не найдено задание");
+            }
+            await File.WriteAllTextAsync(filePath, JsonConvert.SerializeObject(schedule));
         }
-        protected override void FinishScheduleTaskInStorage(string scheduleId)
+        protected override Task FinishScheduleTaskInStorageAsync(string scheduleId)
         {
-            throw new NotImplementedException();
+            string filePath = Path.Combine(ScheduleDirectory, $"{scheduleId}.json");
+            string lockPath = Path.Combine(ScheduleDirectory, $"{scheduleId}.lock");
+            if (!File.Exists(filePath))
+            {
+                throw new BaseScheduleException(scheduleId, "Не найдено задание");
+            }
+            if (!File.Exists(filePath))
+            {
+                throw new BaseScheduleException(scheduleId, "Задание не исполняется");
+            }
+            return Task.Run(() => File.Delete(lockPath));
         }
     }
 }
