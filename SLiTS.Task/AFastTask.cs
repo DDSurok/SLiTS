@@ -11,6 +11,6 @@ namespace SLiTS.Api
         public abstract string Title { get; }
         public ILogger Logger { get; }
         public IAsyncStatisticIntercepter<AFastTask> StatisticIntercepter { get; }
-        public abstract Task<Data> InvokeAsync(string query);
+        public abstract Task<FastTaskResponse> InvokeAsync(FastTaskRequest request);
     }
 }

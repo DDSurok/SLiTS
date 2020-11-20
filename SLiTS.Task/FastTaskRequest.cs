@@ -4,7 +4,7 @@ namespace SLiTS.Api
 {
     public class FastTaskRequest
     {
-        public string Query { get; set; }
+        public virtual string Query { get; set; }
         public string Title { get; set; }
         public string Id { get; set; }
     }

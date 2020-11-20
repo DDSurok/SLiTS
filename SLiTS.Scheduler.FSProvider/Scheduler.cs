@@ -4,7 +4,6 @@ using SLiTS.Api.Throw;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -37,7 +36,7 @@ namespace SLiTS.Scheduler.FSProvider
             // TODO: Need implemented after create part of Fast Task Handling
             yield break;
         }
-        protected override async IAsyncEnumerable<(string taskTitle, FastTaskRequest request)> FastTaskRequestIteratorAsync([EnumeratorCancellation] CancellationToken token)
+        protected override async IAsyncEnumerable<FastTaskRequest> FastTaskRequestIteratorAsync([EnumeratorCancellation] CancellationToken token)
         {
             while (true)
             {
@@ -49,7 +48,7 @@ namespace SLiTS.Scheduler.FSProvider
                 }
             }
         }
-        protected override Task SaveFastTaskResponse(string taskId, Data response)
+        protected override Task SaveFastTaskResponse(FastTaskResponse response)
         {
             throw new NotImplementedException();
         }
@@ -80,12 +79,12 @@ namespace SLiTS.Scheduler.FSProvider
             await File.WriteAllTextAsync(filePath, JsonConvert.SerializeObject(schedule));
             await File.WriteAllTextAsync(lockPath, "");
         }
-        protected override async Task UpdateScheduleTaskInStorageAsync(string scheduleId, Schedule schedule)
+        protected override async Task UpdateScheduleTaskInStorageAsync(Schedule schedule)
         {
-            string filePath = Path.Combine(ScheduleDirectory, $"{scheduleId}.json");
+            string filePath = Path.Combine(ScheduleDirectory, $"{schedule.Id}.json");
             if (!File.Exists(filePath))
             {
-                throw new BaseScheduleException(scheduleId, "Не найдено задание");
+                throw new BaseScheduleException(schedule, "Не найдено задание");
             }
             await File.WriteAllTextAsync(filePath, JsonConvert.SerializeObject(schedule));
         }

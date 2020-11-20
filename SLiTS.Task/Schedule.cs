@@ -5,6 +5,7 @@ namespace SLiTS.Api
 {
     public class Schedule
     {
+        public string Id { get; set; }
         public DayOfWeek[] WeeklyPlan { get; set; }
         public TimeSpan BeginDailyPlan { get; set; }
         public TimeSpan EndDailyPlan { get; set; }
