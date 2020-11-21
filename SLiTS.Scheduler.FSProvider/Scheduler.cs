@@ -31,10 +31,24 @@ namespace SLiTS.Scheduler.FSProvider
         /// Каталог настроек обработчиков быстрых задач
         /// </summary>
         public string ConfigDirectory { get; }
-        protected override IEnumerable<(string handler, string title, string @params)> FastTaskParamsIterator()
+        protected override IEnumerable<FastTaskConfig> FastTaskConfigsIterator()
         {
-            // TODO: Need implemented after create part of Fast Task Handling
-            yield break;
+            foreach(FileInfo fi in new DirectoryInfo(ConfigDirectory).EnumerateFiles("*.json"))
+            {
+                FastTaskConfig config;
+                try
+                {
+                    using StreamReader reader = fi.OpenText();
+                    config = JsonConvert.DeserializeObject<FastTaskConfig>(reader.ReadToEnd());
+                }
+                catch(Exception ex)
+                {
+                    if (Logger.IsWarnEnabled)
+                        Logger.Warn(ex, $"Ошибка при чтении настроек быстрой задачи \"{fi.FullName}\"");
+                    continue;
+                }
+                yield return config;
+            }
         }
         protected override async IAsyncEnumerable<FastTaskRequest> FastTaskRequestIteratorAsync([EnumeratorCancellation] CancellationToken token)
         {

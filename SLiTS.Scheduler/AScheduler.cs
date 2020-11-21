@@ -8,7 +8,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -63,7 +62,7 @@ namespace SLiTS.Scheduler
         protected IContainer FastTaskContainer { get; }
         protected ILogger Logger { get; }
         protected readonly ConcurrentDictionary<string, (ATask, Task)> ActiveTasks = new ConcurrentDictionary<string, (ATask, Task)>();
-        protected abstract IEnumerable<(string handler, string title, string @params)> FastTaskParamsIterator();
+        protected abstract IEnumerable<FastTaskConfig> FastTaskConfigsIterator();
         protected abstract IAsyncEnumerable<FastTaskRequest> FastTaskRequestIteratorAsync(CancellationToken token);
         protected abstract Task SaveFastTaskResponse(FastTaskResponse response);
         protected abstract IAsyncEnumerable<(string scheduleId, Schedule schedule, bool isRunning)> GetAllSchedulesAsync();
@@ -92,19 +91,19 @@ namespace SLiTS.Scheduler
         protected abstract Task FinishScheduleTaskInStorageAsync(string scheduleId);
         public void Initialize()
         {
-            foreach ((string handler, string title, string @params) in FastTaskParamsIterator())
+            foreach (FastTaskConfig config in FastTaskConfigsIterator())
             {
-                if (FastTaskContainer.TryResolve(Type.GetType(handler), out object task))
+                if (FastTaskContainer.TryResolve(Type.GetType(config.Handler), out object task))
                 {
                     AFastTask fastTask = (AFastTask)task;
-                    fastTask.Params = @params;
-                    FastTaskHandlers.Add(title, fastTask);
+                    fastTask.Params = config.Parameters;
+                    FastTaskHandlers.Add(config.Title, fastTask);
                 }
                 else
                 {
                     if (Logger.IsInfoEnabled)
                     {
-                        Logger.Info($@"Не удалось зарегистрировать обработчик {handler} для задачи {title}.");
+                        Logger.Info($@"Не удалось зарегистрировать обработчик {config.Handler} для задачи {config.Title}.");
                     }
                 }
             }
