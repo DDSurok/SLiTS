@@ -19,7 +19,7 @@ namespace SLiTS.Scheduler
         {
             bool TestClassImplements(Type type, Type testType)
             {
-                if (type == typeof(object))
+                if (type is null || type == typeof(object))
                 {
                     return false;
                 }
@@ -35,18 +35,21 @@ namespace SLiTS.Scheduler
             taskBuilder.RegisterModule<NLogModule>();
             ContainerBuilder fastTaskBuilder = new ContainerBuilder();
             fastTaskBuilder.RegisterModule<NLogModule>();
+            fastTaskBuilder.RegisterGeneric(typeof(StatisticIntercepter<>)).As(typeof(IAsyncStatisticIntercepter<>));
             foreach (FileInfo fi in new DirectoryInfo(pluginDirectory).GetFiles("*.dll"))
             {
                 Assembly assembly = Assembly.LoadFrom(fi.FullName);
                 foreach (Type type in assembly.GetTypes()
+                                              .Where(t => !t.IsAbstract)
                                               .Where(t => TestClassImplements(t, typeof(ATask))))
                 {
-                    taskBuilder.RegisterType(type);
+                    taskBuilder.RegisterType(type).AsSelf();
                 }
                 foreach (Type type in assembly.GetTypes()
+                                              .Where(t => !t.IsAbstract)
                                               .Where(t => TestClassImplements(t, typeof(AFastTask))))
                 {
-                    fastTaskBuilder.RegisterType(type);
+                    fastTaskBuilder.RegisterType(type).AsSelf();
                 }
             }
             TaskContainer = taskBuilder.Build();
@@ -93,10 +96,11 @@ namespace SLiTS.Scheduler
         {
             foreach (FastTaskConfig config in FastTaskConfigsIterator())
             {
-                if (FastTaskContainer.TryResolve(Type.GetType(config.Handler), out object task))
+                Type type = Type.GetType(config.Handler);
+                if (FastTaskContainer.TryResolve(type, out object task))
                 {
                     AFastTask fastTask = (AFastTask)task;
-                    fastTask.Params = config.Parameters;
+                    fastTask.Parameters = config.Parameters;
                     FastTaskHandlers.Add(config.Title, fastTask);
                 }
                 else

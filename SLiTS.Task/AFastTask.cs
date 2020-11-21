@@ -7,7 +7,7 @@ namespace SLiTS.Api
     {
         public AFastTask(ILogger logger, IAsyncStatisticIntercepter<AFastTask> statisticIntercepter)
             => (Logger, StatisticIntercepter) = (logger, statisticIntercepter);
-        public string Params { get; set; }
+        public virtual string Parameters { get; set; }
         public abstract string Title { get; }
         public ILogger Logger { get; }
         public IAsyncStatisticIntercepter<AFastTask> StatisticIntercepter { get; }

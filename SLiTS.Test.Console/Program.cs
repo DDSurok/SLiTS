@@ -1,4 +1,7 @@
-﻿using System.IO;
+﻿using Newtonsoft.Json;
+using SLiTS.Api;
+using System.IO;
+using System.Linq;
 
 namespace SLiTS.Test.Console
 {
@@ -16,6 +19,9 @@ namespace SLiTS.Test.Console
                                                      storeDirectory: storeDir.FullName,
                                                      scheduleDirectory: scheduleDir.FullName,
                                                      configDirectory: configDir.FullName);
+            scheduler.Initialize();
+            scheduler.Start();
+
         }
 
         private static void InitDirectories(DirectoryInfo storeDir, DirectoryInfo scheduleDir, DirectoryInfo configDir)
@@ -29,7 +35,17 @@ namespace SLiTS.Test.Console
             if (configDir.Exists)
                 configDir.Delete(true);
             configDir.Create();
-
+            foreach(int i in Enumerable.Range(2, 10))
+            {
+                FastTaskConfig config = new FastTaskConfig
+                    {
+                        Title = $"Pow ^{i}",
+                        Handler = "SLiTS.Test.Console.PowFastTask",
+                        Parameters = $"{i}"
+                    };
+                File.WriteAllText(Path.Combine(configDir.FullName, $"pow{i}.json"),
+                                  JsonConvert.SerializeObject(config));
+            }
         }
     }
 }
