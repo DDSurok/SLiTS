@@ -40,7 +40,7 @@ namespace SLiTS.Test.Console
                 FastTaskConfig config = new FastTaskConfig
                     {
                         Title = $"Pow ^{i}",
-                        Handler = "SLiTS.Test.Console.PowFastTask",
+                        Handler = typeof(PowFastTask).FullName,
                         Parameters = $"{i}"
                     };
                 File.WriteAllText(Path.Combine(configDir.FullName, $"pow{i}.json"),

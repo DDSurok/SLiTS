@@ -9,9 +9,9 @@ namespace SLiTS.Scheduler
     {
         public int Counter { get; } = 0;
         public int Limit { get; }
-        public StatisticIntercepter(int limit)
+        public StatisticIntercepter()
         {
-            Limit = limit;
+            Limit = 10;
             History = new LimitedQueue<ImplementationRecord>(Limit);
         }
         public LimitedQueue<ImplementationRecord> History { get; }

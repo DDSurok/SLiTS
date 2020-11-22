@@ -17,7 +17,7 @@ namespace SLiTS.Scheduler
     {
         protected AScheduler(string pluginDirectory)
         {
-            bool TestClassImplements(Type type, Type testType)
+            static bool TestClassImplements(Type type, Type testType)
             {
                 if (type is null || type == typeof(object))
                 {
@@ -35,7 +35,7 @@ namespace SLiTS.Scheduler
             taskBuilder.RegisterModule<NLogModule>();
             ContainerBuilder fastTaskBuilder = new ContainerBuilder();
             fastTaskBuilder.RegisterModule<NLogModule>();
-            fastTaskBuilder.RegisterGeneric(typeof(StatisticIntercepter<>)).As(typeof(IAsyncStatisticIntercepter<>));
+            fastTaskBuilder.RegisterGeneric(typeof(StatisticIntercepter<>)).AsSelf().As(typeof(IAsyncStatisticIntercepter<>));
             foreach (FileInfo fi in new DirectoryInfo(pluginDirectory).GetFiles("*.dll"))
             {
                 Assembly assembly = Assembly.LoadFrom(fi.FullName);
@@ -96,7 +96,7 @@ namespace SLiTS.Scheduler
         {
             foreach (FastTaskConfig config in FastTaskConfigsIterator())
             {
-                Type type = Type.GetType(config.Handler);
+                Type type = AppDomain.CurrentDomain.GetAssemblies().SelectMany(a => a.GetTypes()).FirstOrDefault(t => t.FullName == config.Handler);
                 if (FastTaskContainer.TryResolve(type, out object task))
                 {
                     AFastTask fastTask = (AFastTask)task;
