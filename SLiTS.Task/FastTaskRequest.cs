@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 
 namespace SLiTS.Api
 {
@@ -6,6 +7,7 @@ namespace SLiTS.Api
     {
         public virtual string Query { get; set; }
         public string Title { get; set; }
+        [JsonIgnore]
         public string Id { get; set; }
     }
 }

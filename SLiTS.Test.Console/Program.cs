@@ -2,6 +2,7 @@
 using SLiTS.Api;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace SLiTS.Test.Console
 {
@@ -21,7 +22,6 @@ namespace SLiTS.Test.Console
                                                      configDirectory: configDir.FullName);
             scheduler.Initialize();
             scheduler.Start();
-
         }
 
         private static void InitDirectories(DirectoryInfo storeDir, DirectoryInfo scheduleDir, DirectoryInfo configDir)
@@ -45,6 +45,19 @@ namespace SLiTS.Test.Console
                     };
                 File.WriteAllText(Path.Combine(configDir.FullName, $"pow{i}.json"),
                                   JsonConvert.SerializeObject(config));
+            }
+            foreach (int i in Enumerable.Range(20, 80))
+            {
+                foreach (int j in Enumerable.Range(2, 9))
+                {
+                    FastTaskRequest request = new FastTaskRequest
+                    {
+                        Title = $"Pow ^{j}",
+                        Query = i.ToString()
+                    };
+                    File.WriteAllText(Path.Combine(storeDir.FullName, $"{System.Guid.NewGuid()}.json"),
+                                      JsonConvert.SerializeObject(request));
+                }
             }
         }
     }

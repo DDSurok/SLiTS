@@ -2,6 +2,7 @@
 using SLiTS.Api;
 using SLiTS.Api.Throw;
 using System;
+using System.Linq;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.CompilerServices;
@@ -52,13 +53,31 @@ namespace SLiTS.Scheduler.FSProvider
         }
         protected override async IAsyncEnumerable<FastTaskRequest> FastTaskRequestIteratorAsync([EnumeratorCancellation] CancellationToken token)
         {
+            DirectoryInfo storeDir = new DirectoryInfo(StoreDirectory);
+            if (!storeDir.Exists)
+                storeDir.Create();
             while (true)
             {
-                // TODO: Need implemented after create part of Fast Task Handling
                 await Task.Delay(1000);
                 if (token.IsCancellationRequested)
                 {
                     yield break;
+                }
+                foreach(FileInfo reqFile in storeDir.EnumerateFiles("*.json").OrderByDescending(fi => fi.LastWriteTime))
+                {
+                    FastTaskRequest request;
+                    try
+                    {
+                        using StreamReader sr = reqFile.OpenText();
+                        request = JsonConvert.DeserializeObject<FastTaskRequest>(await sr.ReadToEndAsync());
+                    }
+                    catch
+                    {
+                        reqFile.MoveTo(reqFile.FullName + ".bad");
+                        continue;
+                    }
+                    reqFile.Delete();
+                    yield return request;
                 }
             }
         }
