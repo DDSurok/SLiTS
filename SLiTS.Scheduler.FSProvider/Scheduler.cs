@@ -70,21 +70,21 @@ namespace SLiTS.Scheduler.FSProvider
                     {
                         using StreamReader sr = reqFile.OpenText();
                         request = JsonConvert.DeserializeObject<FastTaskRequest>(await sr.ReadToEndAsync());
+                        request.Id = reqFile.Name[0..^5];
                     }
                     catch
                     {
-                        reqFile.MoveTo(reqFile.FullName + ".bad");
+                        reqFile.MoveTo(reqFile.FullName[0..^4] + "bad");
                         continue;
                     }
-                    reqFile.Delete();
+                    reqFile.MoveTo(reqFile.FullName + ".ok");
                     yield return request;
                 }
             }
         }
         protected override Task SaveFastTaskResponse(FastTaskResponse response)
-        {
-            throw new NotImplementedException();
-        }
+            => File.WriteAllTextAsync(Path.Combine(StoreDirectory, response.Id + ".data"),
+                                      JsonConvert.SerializeObject(response));
         protected override async IAsyncEnumerable<(string scheduleId, Schedule schedule, bool isRunning)> GetAllSchedulesAsync()
         {
             foreach (FileInfo fileInfo in new DirectoryInfo(ScheduleDirectory).GetFiles("*.json"))

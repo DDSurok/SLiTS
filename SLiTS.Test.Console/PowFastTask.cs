@@ -20,7 +20,7 @@ namespace SLiTS.Test.Console
         {
             DateTime start = DateTime.Now;
             int input = int.Parse(request.Query);
-            await Task.Delay(new Random((int)start.Ticks).Next(100, 5000));
+            await Task.Delay(new Random((int)start.Ticks).Next(100, 1000));
             int result = (int)Math.Pow(input, PowB);
             await StatisticIntercepter.RegistredFinalAsync(new ImplementationRecord
             {

@@ -12,9 +12,9 @@ namespace SLiTS.Scheduler
         public StatisticIntercepter()
         {
             Limit = 10;
-            History = new LimitedQueue<ImplementationRecord>(Limit);
+            History = new LimitedConcurrentQueue<ImplementationRecord>(Limit);
         }
-        public LimitedQueue<ImplementationRecord> History { get; }
+        public LimitedConcurrentQueue<ImplementationRecord> History { get; }
         public async Task RegistredFinalAsync(string query, DateTime start, TimeSpan delay, int dataCount)
         {
             await Task.Run(() => History.Push(new ImplementationRecord(query, delay, start, dataCount)));

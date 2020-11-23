@@ -118,6 +118,8 @@ namespace SLiTS.Scheduler
             CancellationToken token = cancelTokenSource.Token;
             Task fastTaskScheduler = new Task(async () => await StartFastTaskSchedulerAsync(token), token);
             Task taskScheduler = new Task(async () => await StartTaskScheduler(token), token);
+            fastTaskScheduler.Start();
+            taskScheduler.Start();
             Task.WaitAll(fastTaskScheduler, taskScheduler);
         }
         private async Task StartTaskScheduler(CancellationToken token)
@@ -171,15 +173,19 @@ namespace SLiTS.Scheduler
             {
                 if (FastTaskHandlers.ContainsKey(request.Title))
                 {
-                    try
+                    Task task = new Task(async () =>
                     {
-                        await SaveFastTaskResponse(await FastTaskHandlers[request.Title].InvokeAsync(request));
-                    }
-                    catch (Exception ex)
-                    {
-                        if (Logger.IsErrorEnabled)
-                            Logger.Error(ex, @$"При выполнении задачи ""{request.Title}"" произошла ошибка");
-                    }
+                        try
+                        {
+                            await SaveFastTaskResponse(await FastTaskHandlers[request.Title].InvokeAsync(request));
+                        }
+                        catch (Exception ex)
+                        {
+                            if (Logger.IsErrorEnabled)
+                                Logger.Error(ex, @$"При выполнении задачи ""{request.Title}"" произошла ошибка");
+                        }
+                    });
+                    task.Start();
                 }
                 else
                 {

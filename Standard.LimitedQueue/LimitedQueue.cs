@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System.Collections.Concurrent;
+using System.Collections.Generic;
 
 namespace SLiTS.Standard
 {
@@ -18,6 +19,28 @@ namespace SLiTS.Standard
                 Dequeue();
             }
             Enqueue(item);
+        }
+    }
+
+    public class LimitedConcurrentQueue<T> : ConcurrentQueue<T>
+    {
+        public LimitedConcurrentQueue(int limit)
+        {
+            Limit = limit;
+        }
+
+        public int Limit { get; }
+
+        public void Push(T item)
+        {
+            lock (this)
+            {
+                if (Count == Limit)
+                {
+                    TryDequeue(out _);
+                }
+                Enqueue(item);
+            }
         }
     }
 }
