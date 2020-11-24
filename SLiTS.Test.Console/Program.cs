@@ -1,5 +1,6 @@
 ﻿using Newtonsoft.Json;
 using SLiTS.Api;
+using System;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -8,7 +9,7 @@ namespace SLiTS.Test.Console
 {
     class Program
     {
-        static void Main(string[] args)
+        static void Main()
         {
             DirectoryInfo rootDir = new DirectoryInfo(".");
             DirectoryInfo storeDir = rootDir.CreateSubdirectory("store");
@@ -35,30 +36,55 @@ namespace SLiTS.Test.Console
             if (configDir.Exists)
                 configDir.Delete(true);
             configDir.Create();
-            foreach(int i in Enumerable.Range(2, 10))
+            foreach (int i in Enumerable.Range(2, 9))
             {
                 FastTaskConfig config = new FastTaskConfig
-                    {
-                        Title = $"Pow ^{i}",
-                        Handler = typeof(PowFastTask).FullName,
-                        Parameters = $"{i}"
-                    };
+                {
+                    Title = $"Pow ^{i}",
+                    Handler = typeof(PowFastTask).FullName,
+                    Parameters = $"{i}"
+                };
                 File.WriteAllText(Path.Combine(configDir.FullName, $"pow{i}.json"),
                                   JsonConvert.SerializeObject(config));
             }
-            foreach (int i in Enumerable.Range(20, 80))
+            //foreach (int i in Enumerable.Range(20, 80))
+            //{
+            //    foreach (int j in Enumerable.Range(2, 9))
+            //    {
+            //        FastTaskRequest request = new FastTaskRequest
+            //        {
+            //            Title = $"Pow ^{j}",
+            //            Query = i.ToString()
+            //        };
+            //        File.WriteAllText(Path.Combine(storeDir.FullName, $"{System.Guid.NewGuid()}.json"),
+            //                          JsonConvert.SerializeObject(request));
+            //    }
+            //}
+            Schedule schedule = new Schedule
             {
-                foreach (int j in Enumerable.Range(2, 9))
+                Active = true,
+                BeginDailyPlan = new TimeSpan(0, 0, 0),
+                EndDailyPlan = new TimeSpan(23, 59, 59),
+                Id = Guid.NewGuid().ToString(),
+                LastRunning = DateTime.MinValue,
+                MinimalElapsed = new TimeSpan(0, 1, 0),
+                Parameters = "1",
+                Repeat = true,
+                TaskHandler = typeof(AddTask).FullName,
+                Title = "Сдвиг влево",
+                UsingResource = new string[0],
+                WeeklyPlan = new[]
                 {
-                    FastTaskRequest request = new FastTaskRequest
-                    {
-                        Title = $"Pow ^{j}",
-                        Query = i.ToString()
-                    };
-                    File.WriteAllText(Path.Combine(storeDir.FullName, $"{System.Guid.NewGuid()}.json"),
-                                      JsonConvert.SerializeObject(request));
+                    DayOfWeek.Monday,
+                    DayOfWeek.Tuesday,
+                    DayOfWeek.Wednesday,
+                    DayOfWeek.Thursday,
+                    DayOfWeek.Friday,
+                    DayOfWeek.Saturday,
+                    DayOfWeek.Sunday
                 }
-            }
+            };
+            File.WriteAllText(Path.Combine(scheduleDir.FullName, $"{schedule.Id}.json"), JsonConvert.SerializeObject(schedule));
         }
     }
 }

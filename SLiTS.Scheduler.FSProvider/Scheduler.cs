@@ -85,14 +85,15 @@ namespace SLiTS.Scheduler.FSProvider
         protected override Task SaveFastTaskResponse(FastTaskResponse response)
             => File.WriteAllTextAsync(Path.Combine(StoreDirectory, response.Id + ".data"),
                                       JsonConvert.SerializeObject(response));
-        protected override async IAsyncEnumerable<(string scheduleId, Schedule schedule, bool isRunning)> GetAllSchedulesAsync()
+        protected override async IAsyncEnumerable<(Schedule schedule, bool isRunning)> GetAllSchedulesAsync()
         {
             foreach (FileInfo fileInfo in new DirectoryInfo(ScheduleDirectory).GetFiles("*.json"))
             {
                 using StreamReader file = fileInfo.OpenText();
                 Schedule schedule = JsonConvert.DeserializeObject<Schedule>(await file.ReadToEndAsync());
-                string lockFile = fileInfo.FullName[0..^5]; 
-                yield return (fileInfo.Name, schedule, File.Exists(lockFile));
+                schedule.Id = fileInfo.Name[0..^5];
+                string lockFile = fileInfo.FullName[0..^5] + ".lock";
+                yield return (schedule, File.Exists(lockFile));
             }
         }
         protected override async Task StartScheduleTaskInStorageAsync(string scheduleId)

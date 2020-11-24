@@ -1,11 +1,14 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 using System.Linq;
 
 namespace SLiTS.Api
 {
     public class Schedule
     {
+        [JsonIgnore]
         public string Id { get; set; }
+        public string Title { get; set; }
         public DayOfWeek[] WeeklyPlan { get; set; }
         public TimeSpan BeginDailyPlan { get; set; }
         public TimeSpan EndDailyPlan { get; set; }

@@ -68,25 +68,25 @@ namespace SLiTS.Scheduler
         protected abstract IEnumerable<FastTaskConfig> FastTaskConfigsIterator();
         protected abstract IAsyncEnumerable<FastTaskRequest> FastTaskRequestIteratorAsync(CancellationToken token);
         protected abstract Task SaveFastTaskResponse(FastTaskResponse response);
-        protected abstract IAsyncEnumerable<(string scheduleId, Schedule schedule, bool isRunning)> GetAllSchedulesAsync();
-        private async Task<(string scheduleId, Schedule schedule)> GetFirstScheduleTaskFromStorageAsync()
+        protected abstract IAsyncEnumerable<(Schedule schedule, bool isRunning)> GetAllSchedulesAsync();
+        private async Task<Schedule> GetFirstScheduleTaskFromStorageAsync()
         {
-            IEnumerable<string> usingResources = new string[] { };
-            List<(string scheduleId, Schedule schedule, bool isRunning)> tasks = new List<(string scheduleId, Schedule schedule, bool isRunning)>();
-            await foreach (var item in GetAllSchedulesAsync())
+            IEnumerable<string> usingResources = new string[0];
+            List<(Schedule schedule, bool isRunning)> tasks = new List<(Schedule schedule, bool isRunning)>();
+            await foreach ((Schedule schedule, bool isRunning) in GetAllSchedulesAsync())
             {
-                if (item.isRunning)
+                if (isRunning)
                 {
-                    usingResources = usingResources.Concat(item.schedule.UsingResource).Distinct();
+                    usingResources = usingResources.Concat(schedule.UsingResource).Distinct();
                 }
-                if (item.schedule.Active && item.schedule.TestInQueue())
+                if (schedule.Active && schedule.TestInQueue())
                 {
-                    tasks.Add(item);
+                    tasks.Add((schedule, isRunning));
                 }
             }
             return tasks.Where(r => r.schedule.UsingResource.Intersect(usingResources).Any())
                         .OrderByDescending(r => r.schedule.GetRealWaiting())
-                        .Select(r => (r.scheduleId, r.schedule))
+                        .Select(r => r.schedule)
                         .FirstOrDefault();
         }
         protected abstract Task StartScheduleTaskInStorageAsync(string scheduleId);
@@ -124,23 +124,23 @@ namespace SLiTS.Scheduler
         }
         private async Task StartTaskScheduler(CancellationToken token)
         {
-            Thread.Sleep(5000);
+            await Task.Delay(5000);
             while (true)
             {
-                Thread.Sleep(1000);
-                (string scheduleId, Schedule schedule) = await GetFirstScheduleTaskFromStorageAsync();
-                if (string.IsNullOrWhiteSpace(scheduleId))
+                await Task.Delay(1000);
+                Schedule schedule = await GetFirstScheduleTaskFromStorageAsync();
+                if (schedule is null)
                 {
                     Thread.Sleep(10000);
                     continue;
                 }
                 if (Logger.IsDebugEnabled)
-                    Logger.Debug($@"Найдена задача, ожидающая выполнения - ScheduleID: ""{scheduleId}""");
+                    Logger.Debug($@"Найдена задача, ожидающая выполнения - ScheduleID: ""{schedule.Id}""");
                 if (Logger.IsTraceEnabled)
                     Logger.Trace($"Schedule Info: {schedule}");
                 if (TaskContainer.TryResolve(Type.GetType(schedule.TaskHandler), out object t) && t is ATask task)
                 {
-                    await StartScheduleTaskInStorageAsync(scheduleId);
+                    await StartScheduleTaskInStorageAsync(schedule.Id);
                     schedule.LastRunning = DateTime.Now;
                     await UpdateScheduleTaskInStorageAsync(schedule);
                     task.Params = schedule.Parameters;
@@ -149,17 +149,17 @@ namespace SLiTS.Scheduler
                         ActiveTasks.TryAdd(schedule.Id, (task, null));
                         Task execTask = new Task(async () =>
                         {
-                            await ActiveTasks[scheduleId].Item1.InvokeAsync(token);
+                            await ActiveTasks[schedule.Id].Item1.InvokeAsync(token);
                             await FinishScheduleTaskAsync(schedule, task);
                         }, token);
-                        ActiveTasks[scheduleId] = ( ActiveTasks[scheduleId].Item1, execTask );
-                        ActiveTasks[scheduleId].Item2.Start();
+                        ActiveTasks[schedule.Id] = ( ActiveTasks[schedule.Id].Item1, execTask );
+                        ActiveTasks[schedule.Id].Item2.Start();
                     } else {
                         await FinishScheduleTaskAsync(schedule, task);
                     }
                 } else {
                     if (Logger.IsWarnEnabled)
-                        Logger.Warn($"Не найден класс, описывающий исполнение задачи ScheduleID: \"{scheduleId}\"");
+                        Logger.Warn($"Не найден класс, описывающий исполнение задачи ScheduleID: \"{schedule.Id}\"");
                     if (Logger.IsDebugEnabled)
                         Logger.Debug($"Schedule Info: {schedule}");
                     schedule.Repeat = false;
