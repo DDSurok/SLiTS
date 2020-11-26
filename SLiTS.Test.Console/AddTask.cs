@@ -19,9 +19,9 @@ namespace SLiTS.Test.Console
             await Task.Delay(new Random().Next(100, 10000));
         }
 
-        public override Task<bool> Test()
+        public override async Task<bool> TestAsync()
         {
-            return new Task<bool>(() => true);
+            return true;
         }
     }
 }

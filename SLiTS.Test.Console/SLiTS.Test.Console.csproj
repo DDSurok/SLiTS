@@ -7,7 +7,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\SLiTS.Scheduler.FSProvider\SLiTS.Scheduler.FSProvider.csproj" />
-    <ProjectReference Include="..\SLiTS.Task\SLiTS.Api.csproj" />
   </ItemGroup>
 
 </Project>

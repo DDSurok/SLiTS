@@ -22,7 +22,7 @@ namespace SLiTS.Test.Console
                                                      scheduleDirectory: scheduleDir.FullName,
                                                      configDirectory: configDir.FullName);
             scheduler.Initialize();
-            scheduler.Start();
+            scheduler.StartAsync().Wait();
         }
 
         private static void InitDirectories(DirectoryInfo storeDir, DirectoryInfo scheduleDir, DirectoryInfo configDir)
