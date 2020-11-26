@@ -22,7 +22,7 @@ namespace SLiTS.Api
         public bool TestInQueue()
         {
             DateTime now = DateTime.Now;
-            return WeeklyPlan.Contains(now.DayOfWeek) && now.TimeOfDay > BeginDailyPlan && now.TimeOfDay < EndDailyPlan;
+            return GetRealWaiting() > TimeSpan.Zero && WeeklyPlan.Contains(now.DayOfWeek) && now.TimeOfDay > BeginDailyPlan && now.TimeOfDay < EndDailyPlan;
         }
 
         public TimeSpan GetRealWaiting()
