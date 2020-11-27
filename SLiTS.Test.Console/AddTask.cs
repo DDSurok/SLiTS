@@ -16,7 +16,7 @@ namespace SLiTS.Test.Console
             int val = int.Parse(Params);
             val *= 2;
             Params = val.ToString();
-            await Task.Delay(new Random().Next(100, 10000));
+            await Task.Delay(new Random().Next(10000, 60000));
         }
 
         public override async Task<bool> TestAsync()

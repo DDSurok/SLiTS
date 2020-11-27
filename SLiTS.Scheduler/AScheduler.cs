@@ -131,7 +131,7 @@ namespace SLiTS.Scheduler
                     Schedule schedule = await GetFirstScheduleTaskFromStorageAsync();
                     if (schedule is null)
                     {
-                        Thread.Sleep(10000);
+                        Thread.Sleep(1000);
                         continue;
                     }
                     if (Logger.IsDebugEnabled)

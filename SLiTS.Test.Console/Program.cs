@@ -72,7 +72,7 @@ namespace SLiTS.Test.Console
                 Repeat = true,
                 TaskHandler = typeof(AddTask).FullName,
                 Title = "Сдвиг влево",
-                UsingResource = new string[0],
+                UsingResource = new string[] { "1" },
                 WeeklyPlan = new[]
                 {
                     DayOfWeek.Monday,
@@ -84,6 +84,8 @@ namespace SLiTS.Test.Console
                     DayOfWeek.Sunday
                 }
             };
+            File.WriteAllText(Path.Combine(scheduleDir.FullName, $"{schedule.Id}.json"), JsonConvert.SerializeObject(schedule));
+            schedule.Id = Guid.NewGuid().ToString();
             File.WriteAllText(Path.Combine(scheduleDir.FullName, $"{schedule.Id}.json"), JsonConvert.SerializeObject(schedule));
         }
     }
