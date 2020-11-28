@@ -12,7 +12,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\SLiTS.Api\SLiTS.Api.csproj" />
-    <ProjectReference Include="..\Standard.LimitedQueue\SLiTS.Standard.csproj" />
   </ItemGroup>
 
 </Project>
