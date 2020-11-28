@@ -8,13 +8,15 @@ namespace SLiTS.Test.Console
 {
     public class AddTask : ATask
     {
-        public AddTask(ILogger logger) : base(logger)
+        private int shiftVal;
+        public AddTask(ILogger logger, ISharedPropertyProvider propertyProvider) : base(logger, propertyProvider)
         {
+            shiftVal = int.Parse(propertyProvider["shiftCount"]);
         }
         public override async Task InvokeAsync(CancellationToken token)
         {
             int val = int.Parse(Params);
-            val *= 2;
+            val *= shiftVal;
             Params = val.ToString();
             await Task.Delay(new Random().Next(10000, 60000));
         }

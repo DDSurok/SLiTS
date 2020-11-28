@@ -7,8 +7,8 @@ namespace SLiTS.Test.Console
 {
     public class PowFastTask : AFastTask
     {
-        public PowFastTask(ILogger logger, IAsyncStatisticIntercepter<AFastTask> statisticIntercepter)
-            : base(logger, statisticIntercepter) { }
+        public PowFastTask(ILogger logger, IAsyncStatisticIntercepter<AFastTask> statisticIntercepter, ISharedPropertyProvider propertyProvider)
+            : base(logger, statisticIntercepter, propertyProvider) { }
 
         public override string Title => $"Test fast task digit pow {PowB}";
 

@@ -32,11 +32,15 @@ namespace SLiTS.Scheduler
             }
 
             Logger = LogManager.GetCurrentClassLogger();
+            PluginDirectory = pluginDirectory;
             ContainerBuilder taskBuilder = new ContainerBuilder();
             taskBuilder.RegisterModule<NLogModule>();
             ContainerBuilder fastTaskBuilder = new ContainerBuilder();
             fastTaskBuilder.RegisterModule<NLogModule>();
+            SharedPropertyProvider propertyProvider = new SharedPropertyProvider(GetSharedPropertiesAsync().Result);
             fastTaskBuilder.RegisterGeneric(typeof(StatisticIntercepter<>)).AsSelf().As(typeof(IAsyncStatisticIntercepter<>));
+            taskBuilder.RegisterInstance(propertyProvider).AsSelf().As<ISharedPropertyProvider>();
+            fastTaskBuilder.RegisterInstance(propertyProvider).AsSelf().As<ISharedPropertyProvider>();
             foreach (FileInfo fi in new DirectoryInfo(pluginDirectory).EnumerateFiles("*.dll"))
             {
                 Assembly assembly = Assembly.LoadFrom(fi.FullName);
@@ -65,8 +69,10 @@ namespace SLiTS.Scheduler
         protected IContainer TaskContainer { get; }
         protected IContainer FastTaskContainer { get; }
         protected ILogger Logger { get; }
-        protected readonly ConcurrentDictionary<string, (ATask, Task)> ActiveTasks = new ConcurrentDictionary<string, (ATask, Task)>();
+        protected string PluginDirectory { get; }
+        protected ConcurrentDictionary<string, (ATask, Task)> ActiveTasks { get; } = new ConcurrentDictionary<string, (ATask, Task)>();
         protected abstract IEnumerable<FastTaskConfig> FastTaskConfigsIterator();
+        protected abstract Task<IDictionary<string, string>> GetSharedPropertiesAsync();
         protected abstract IAsyncEnumerable<FastTaskRequest> FastTaskRequestIteratorAsync(CancellationToken token);
         protected abstract Task SaveFastTaskResponse(FastTaskResponse response);
         protected abstract IAsyncEnumerable<(Schedule schedule, bool isRunning)> GetAllSchedulesAsync();
@@ -122,7 +128,12 @@ namespace SLiTS.Scheduler
         }
         private async Task StartTaskScheduler(CancellationToken token)
         {
-            await Task.Delay(500);
+            for (int i = 5; i > 0; i--)
+            {
+                if (Logger.IsTraceEnabled)
+                    Logger.Trace($"Планировщик запустится через {i} секунд...");
+                await Task.Delay(1000);
+            }
             while (true)
             {
                 try

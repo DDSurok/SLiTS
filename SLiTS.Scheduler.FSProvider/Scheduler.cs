@@ -32,6 +32,29 @@ namespace SLiTS.Scheduler.FSProvider
         /// Каталог настроек обработчиков быстрых задач
         /// </summary>
         public string ConfigDirectory { get; }
+        protected override async Task<IDictionary<string, string>> GetSharedPropertiesAsync()
+        {
+            Dictionary<string, string> result = new Dictionary<string, string>();
+            FileInfo fi = new FileInfo(Path.Combine(PluginDirectory, "properties.json"));
+            if (fi.Exists)
+            {
+                using TextReader tr = fi.OpenText();
+                string name = null;
+                string buffer;
+                while ((buffer = await tr.ReadLineAsync()) != null)
+                {
+                    if (string.IsNullOrWhiteSpace(buffer))
+                        continue;
+                    if (name is null)
+                    {
+                        name = buffer.Trim();
+                        continue;
+                    }
+                    result.Add(name, buffer.Trim());
+                }
+            }
+            return result;
+        }
         protected override IEnumerable<FastTaskConfig> FastTaskConfigsIterator()
         {
             foreach(FileInfo fi in new DirectoryInfo(ConfigDirectory).EnumerateFiles("*.json"))

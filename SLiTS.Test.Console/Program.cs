@@ -15,7 +15,7 @@ namespace SLiTS.Test.Console
             DirectoryInfo storeDir = rootDir.CreateSubdirectory("store");
             DirectoryInfo scheduleDir = rootDir.CreateSubdirectory("schedule");
             DirectoryInfo configDir = rootDir.CreateSubdirectory("config");
-            InitDirectories(storeDir, scheduleDir, configDir);
+            InitDirectories(rootDir, storeDir, scheduleDir, configDir);
             Scheduler.FSProvider.Scheduler scheduler
                 = new Scheduler.FSProvider.Scheduler(pluginDirectory: rootDir.FullName,
                                                      storeDirectory: storeDir.FullName,
@@ -25,7 +25,7 @@ namespace SLiTS.Test.Console
             scheduler.StartAsync().Wait();
         }
 
-        private static void InitDirectories(DirectoryInfo storeDir, DirectoryInfo scheduleDir, DirectoryInfo configDir)
+        private static void InitDirectories(DirectoryInfo rootDir, DirectoryInfo storeDir, DirectoryInfo scheduleDir, DirectoryInfo configDir)
         {
             if (storeDir.Exists)
                 storeDir.Delete(true);
@@ -60,6 +60,13 @@ namespace SLiTS.Test.Console
             //                          JsonConvert.SerializeObject(request));
             //    }
             //}
+            FileInfo propertiesFile = new FileInfo(Path.Combine(rootDir.FullName, "properties.json"));
+            if (propertiesFile.Exists)
+                propertiesFile.Delete();
+            using TextWriter tw = propertiesFile.CreateText();
+            tw.WriteLine("shiftCount");
+            tw.WriteLine("2");
+            tw.Flush();
             Schedule schedule = new Schedule
             {
                 Active = true,

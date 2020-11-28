@@ -29,5 +29,21 @@ namespace SLiTS.Api
         {
             return DateTime.Now - LastRunning - MinimalElapsed;
         }
+        public override string ToString()
+        {
+            return @$"
+[ Id: ""{Id}"",
+  Title: ""{Title}"",
+  WeeklyPlan: ""{WeeklyPlan.Select(d => d.ToString()).Aggregate((cur, next) => cur + ", " + next)}"",
+  BeginDailyPlan: ""{BeginDailyPlan}"",
+  EndDailyPlan: ""{EndDailyPlan}"",
+  MinimalElapsed: ""{MinimalElapsed}"",
+  Active: ""{Active}"",
+  Repeat: ""{Repeat}"",
+  LastRunning: ""{LastRunning}"",
+  Parameters: ""{Parameters}"",
+  UsingResource: ""{UsingResource.Aggregate((cur, next) => cur + $", \"{next}")}"",
+  TaskHandler: ""{TaskHandler}"" ]";
+        }
     }
 }
