@@ -9,4 +9,10 @@
     <ProjectReference Include="..\SLiTS.Scheduler.FSProvider\SLiTS.Scheduler.FSProvider.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="nlog.config">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>
