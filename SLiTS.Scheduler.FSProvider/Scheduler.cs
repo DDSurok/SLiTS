@@ -55,15 +55,15 @@ namespace SLiTS.Scheduler.FSProvider
             }
             return result;
         }
-        protected override IEnumerable<FastTaskConfig> FastTaskConfigsIterator()
+        protected override IEnumerable<QuickTaskConfig> QuickTaskConfigsIterator()
         {
             foreach(FileInfo fi in new DirectoryInfo(ConfigDirectory).EnumerateFiles("*.json"))
             {
-                FastTaskConfig config;
+                QuickTaskConfig config;
                 try
                 {
                     using StreamReader reader = fi.OpenText();
-                    config = JsonConvert.DeserializeObject<FastTaskConfig>(reader.ReadToEnd());
+                    config = JsonConvert.DeserializeObject<QuickTaskConfig>(reader.ReadToEnd());
                 }
                 catch(Exception ex)
                 {
@@ -74,7 +74,7 @@ namespace SLiTS.Scheduler.FSProvider
                 yield return config;
             }
         }
-        protected override async IAsyncEnumerable<FastTaskRequest> FastTaskRequestIteratorAsync([EnumeratorCancellation] CancellationToken token)
+        protected override async IAsyncEnumerable<QuickTaskRequest> QuickTaskRequestIteratorAsync([EnumeratorCancellation] CancellationToken token)
         {
             DirectoryInfo storeDir = new DirectoryInfo(StoreDirectory);
             if (!storeDir.Exists)
@@ -88,11 +88,11 @@ namespace SLiTS.Scheduler.FSProvider
                 }
                 foreach(FileInfo reqFile in storeDir.EnumerateFiles("*.json").OrderByDescending(fi => fi.LastWriteTime))
                 {
-                    FastTaskRequest request;
+                    QuickTaskRequest request;
                     try
                     {
                         using StreamReader sr = reqFile.OpenText();
-                        request = JsonConvert.DeserializeObject<FastTaskRequest>(await sr.ReadToEndAsync());
+                        request = JsonConvert.DeserializeObject<QuickTaskRequest>(await sr.ReadToEndAsync());
                         request.Id = reqFile.Name[0..^5];
                     }
                     catch
@@ -105,22 +105,22 @@ namespace SLiTS.Scheduler.FSProvider
                 }
             }
         }
-        protected override Task SaveFastTaskResponse(FastTaskResponse response)
+        protected override Task SaveQuickTaskResponse(QuickTaskResponse response)
             => File.WriteAllTextAsync(Path.Combine(StoreDirectory, response.Id + ".data"),
                                       JsonConvert.SerializeObject(response));
-        protected override async IAsyncEnumerable<(Schedule schedule, bool isRunning)> GetAllSchedulesAsync()
+        protected override async IAsyncEnumerable<(LongTermTaskSchedule schedule, bool isRunning)> GetAllLongTermTaskSchedulesAsync()
         {
             DirectoryInfo scheduleDir = new DirectoryInfo(ScheduleDirectory);
             foreach (FileInfo fileInfo in scheduleDir.EnumerateFiles("*.json"))
             {
                 using StreamReader file = fileInfo.OpenText();
-                Schedule schedule = JsonConvert.DeserializeObject<Schedule>(await file.ReadToEndAsync());
+                LongTermTaskSchedule schedule = JsonConvert.DeserializeObject<LongTermTaskSchedule>(await file.ReadToEndAsync());
                 schedule.Id = fileInfo.Name[0..^5];
                 string lockFile = fileInfo.FullName[0..^5] + ".lock";
                 yield return (schedule, File.Exists(lockFile));
             }
         }
-        protected override async Task StartScheduleTaskInStorageAsync(Schedule schedule)
+        protected override async Task StartLongTermTaskScheduleInStorageAsync(LongTermTaskSchedule schedule)
         {
             string filePath = Path.Combine(ScheduleDirectory, $"{schedule.Id}.json");
             string lockPath = Path.Combine(ScheduleDirectory, $"{schedule.Id}.lock");
@@ -128,7 +128,7 @@ namespace SLiTS.Scheduler.FSProvider
             {
                 throw new BaseScheduleException(schedule, "Не найдено задание");
             }
-            Schedule scheduleInStorage = JsonConvert.DeserializeObject<Schedule>(await File.ReadAllTextAsync(filePath));
+            LongTermTaskSchedule scheduleInStorage = JsonConvert.DeserializeObject<LongTermTaskSchedule>(await File.ReadAllTextAsync(filePath));
             scheduleInStorage.LastRunning = DateTime.Now;
             if (File.Exists(lockPath))
             {
@@ -137,7 +137,7 @@ namespace SLiTS.Scheduler.FSProvider
             await File.WriteAllTextAsync(filePath, JsonConvert.SerializeObject(scheduleInStorage));
             await File.WriteAllTextAsync(lockPath, "");
         }
-        protected override async Task FinishScheduleTaskInStorageAsync(Schedule schedule)
+        protected override async Task FinishLongTermTaskScheduleInStorageAsync(LongTermTaskSchedule schedule)
         {
             string filePath = Path.Combine(ScheduleDirectory, $"{schedule.Id}.json");
             string lockPath = Path.Combine(ScheduleDirectory, $"{schedule.Id}.lock");
@@ -149,7 +149,7 @@ namespace SLiTS.Scheduler.FSProvider
             {
                 throw new BaseScheduleException(schedule, "Задание не исполняется");
             }
-            Schedule scheduleInStorage = JsonConvert.DeserializeObject<Schedule>(await File.ReadAllTextAsync(filePath));
+            LongTermTaskSchedule scheduleInStorage = JsonConvert.DeserializeObject<LongTermTaskSchedule>(await File.ReadAllTextAsync(filePath));
             scheduleInStorage.Parameters = schedule.Parameters;
             scheduleInStorage.Repeat = schedule.Repeat;
             scheduleInStorage.Active = schedule.Active;

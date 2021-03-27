@@ -4,10 +4,7 @@ namespace SLiTS.Api
 {
     public class LimitedConcurrentQueue<T> : ConcurrentQueue<T>
     {
-        public LimitedConcurrentQueue(int limit)
-        {
-            Limit = limit;
-        }
+        public LimitedConcurrentQueue(int limit) => Limit = limit;
 
         public int Limit { get; }
 

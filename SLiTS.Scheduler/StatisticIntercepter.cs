@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 
 namespace SLiTS.Scheduler
 {
-    public class StatisticIntercepter<T> : IAsyncStatisticIntercepter<T> where T : AFastTask
+    public class StatisticIntercepter<T> : IAsyncStatisticIntercepter<T> where T : AQuickTask
     {
         public int Counter { get; } = 0;
         public int Limit { get; }
@@ -18,7 +18,6 @@ namespace SLiTS.Scheduler
         {
             await Task.Run(() => History.Push(new ImplementationRecord(query, delay, start, dataCount)));
         }
-
         public async Task RegistredFinalAsync(ImplementationRecord record)
         {
             await Task.Run(() => History.Push(record));

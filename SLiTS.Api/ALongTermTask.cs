@@ -4,9 +4,9 @@ using System.Threading.Tasks;
 
 namespace SLiTS.Api
 {
-    public abstract class ATask
+    public abstract class ALongTermTask
     {
-        public ATask(ILogger logger, ISharedPropertyProvider propertyProvider)
+        public ALongTermTask(ILogger logger, ISharedPropertyProvider propertyProvider)
             => (Logger, PropertyProvider) = (logger, propertyProvider);
         public string Title { get; set; }
         protected ILogger Logger { get; }

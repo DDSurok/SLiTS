@@ -1,6 +1,6 @@
 ﻿namespace SLiTS.Api
 {
-    public class FastTaskConfig
+    public class QuickTaskConfig
     {
         public string Title { get; set; }
         public string Handler { get; set; }

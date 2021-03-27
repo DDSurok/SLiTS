@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace SLiTS.Api
 {
-    public class Schedule
+    public class LongTermTaskSchedule
     {
         [JsonIgnore]
         public string Id { get; set; }
@@ -18,17 +18,13 @@ namespace SLiTS.Api
         public DateTime LastRunning { get; set; }
         public string Parameters { get; set; }
         public string[] UsingResource { get; set; }
-        public string TaskHandler { get; set; }
+        public string ClassHandler { get; set; }
         public bool TestInQueue()
         {
             DateTime now = DateTime.Now;
             return GetRealWaiting() > TimeSpan.Zero && WeeklyPlan.Contains(now.DayOfWeek) && now.TimeOfDay > BeginDailyPlan && now.TimeOfDay < EndDailyPlan;
         }
-
-        public TimeSpan GetRealWaiting()
-        {
-            return DateTime.Now - LastRunning - MinimalElapsed;
-        }
+        public TimeSpan GetRealWaiting() => DateTime.Now - LastRunning - MinimalElapsed;
         public override string ToString()
         {
             return @$"
@@ -43,7 +39,7 @@ namespace SLiTS.Api
   LastRunning: ""{LastRunning}"",
   Parameters: ""{Parameters}"",
   UsingResource: ""{UsingResource.Aggregate((cur, next) => cur + $", \"{next}")}"",
-  TaskHandler: ""{TaskHandler}"" ]";
+  TaskHandler: ""{ClassHandler}"" ]";
         }
     }
 }

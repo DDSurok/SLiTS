@@ -46,13 +46,13 @@ namespace SLiTS.Scheduler
                 Assembly assembly = Assembly.LoadFrom(fi.FullName);
                 foreach (Type type in assembly.GetTypes()
                                               .Where(t => !t.IsAbstract)
-                                              .Where(t => TestClassImplements(t, typeof(ATask))))
+                                              .Where(t => TestClassImplements(t, typeof(ALongTermTask))))
                 {
                     taskBuilder.RegisterType(type).AsSelf();
                 }
                 foreach (Type type in assembly.GetTypes()
                                               .Where(t => !t.IsAbstract)
-                                              .Where(t => TestClassImplements(t, typeof(AFastTask))))
+                                              .Where(t => TestClassImplements(t, typeof(AQuickTask))))
                 {
                     fastTaskBuilder.RegisterType(type).AsSelf();
                 }
@@ -65,22 +65,23 @@ namespace SLiTS.Scheduler
             TaskContainer.DisposeAsync().AsTask().Wait();
             FastTaskContainer.DisposeAsync().AsTask().Wait();
         }
-        protected readonly Dictionary<string, AFastTask> FastTaskHandlers = new Dictionary<string, AFastTask>();
+        protected readonly Dictionary<string, AQuickTask> FastTaskHandlers = new Dictionary<string, AQuickTask>();
         protected IContainer TaskContainer { get; }
         protected IContainer FastTaskContainer { get; }
         protected ILogger Logger { get; }
         protected string PluginDirectory { get; }
-        protected ConcurrentDictionary<string, (ATask, Task)> ActiveTasks { get; } = new ConcurrentDictionary<string, (ATask, Task)>();
-        protected abstract IEnumerable<FastTaskConfig> FastTaskConfigsIterator();
+        protected ConcurrentDictionary<string, (ALongTermTask, Task)> ActiveLongTermTasks { get; }
+            = new ConcurrentDictionary<string, (ALongTermTask, Task)>();
+        protected abstract IEnumerable<QuickTaskConfig> QuickTaskConfigsIterator();
         protected abstract Task<IDictionary<string, string>> GetSharedPropertiesAsync();
-        protected abstract IAsyncEnumerable<FastTaskRequest> FastTaskRequestIteratorAsync(CancellationToken token);
-        protected abstract Task SaveFastTaskResponse(FastTaskResponse response);
-        protected abstract IAsyncEnumerable<(Schedule schedule, bool isRunning)> GetAllSchedulesAsync();
-        private async Task<Schedule> GetFirstScheduleTaskFromStorageAsync()
+        protected abstract IAsyncEnumerable<QuickTaskRequest> QuickTaskRequestIteratorAsync(CancellationToken token);
+        protected abstract Task SaveQuickTaskResponse(QuickTaskResponse response);
+        protected abstract IAsyncEnumerable<(LongTermTaskSchedule schedule, bool isRunning)> GetAllLongTermTaskSchedulesAsync();
+        private async Task<LongTermTaskSchedule> GetFirstLongTermTaskScheduleFromStorageAsync()
         {
             IEnumerable<string> usingResources = new string[0];
-            List<Schedule> tasks = new List<Schedule>();
-            await foreach ((Schedule schedule, bool isRunning) in GetAllSchedulesAsync())
+            List<LongTermTaskSchedule> tasks = new List<LongTermTaskSchedule>();
+            await foreach ((LongTermTaskSchedule schedule, bool isRunning) in GetAllLongTermTaskSchedulesAsync())
             {
                 if (isRunning)
                 {
@@ -96,16 +97,16 @@ namespace SLiTS.Scheduler
                         .OrderByDescending(r => r.GetRealWaiting())
                         .FirstOrDefault();
         }
-        protected abstract Task StartScheduleTaskInStorageAsync(Schedule schedule);
-        protected abstract Task FinishScheduleTaskInStorageAsync(Schedule schedule);
+        protected abstract Task StartLongTermTaskScheduleInStorageAsync(LongTermTaskSchedule schedule);
+        protected abstract Task FinishLongTermTaskScheduleInStorageAsync(LongTermTaskSchedule schedule);
         public void Initialize()
         {
-            foreach (FastTaskConfig config in FastTaskConfigsIterator())
+            foreach (QuickTaskConfig config in QuickTaskConfigsIterator())
             {
                 Type type = AppDomain.CurrentDomain.GetAssemblies().SelectMany(a => a.GetTypes()).FirstOrDefault(t => t.FullName == config.Handler);
                 if (FastTaskContainer.TryResolve(type, out object task))
                 {
-                    AFastTask fastTask = (AFastTask)task;
+                    AQuickTask fastTask = (AQuickTask)task;
                     fastTask.Parameters = config.Parameters;
                     FastTaskHandlers.Add(config.Title, fastTask);
                 }
@@ -123,10 +124,10 @@ namespace SLiTS.Scheduler
             CancellationTokenSource cancelTokenSource = new CancellationTokenSource();
             CancellationToken token = cancelTokenSource.Token;
             Task fastTaskScheduler = Task.Run(async () => await StartFastTaskSchedulerAsync(token), token);
-            Task taskScheduler = Task.Run(async () => await StartTaskScheduler(token), token);
+            Task taskScheduler = Task.Run(async () => await StartLongTermTaskScheduler(token), token);
             await Task.WhenAll(new[] { fastTaskScheduler, taskScheduler });
         }
-        private async Task StartTaskScheduler(CancellationToken token)
+        private async Task StartLongTermTaskScheduler(CancellationToken token)
         {
             for (int i = 5; i > 0; i--)
             {
@@ -139,7 +140,7 @@ namespace SLiTS.Scheduler
                 try
                 {
                     await Task.Delay(100);
-                    Schedule schedule = await GetFirstScheduleTaskFromStorageAsync();
+                    LongTermTaskSchedule schedule = await GetFirstLongTermTaskScheduleFromStorageAsync();
                     if (schedule is null)
                     {
                         Thread.Sleep(1000);
@@ -149,23 +150,23 @@ namespace SLiTS.Scheduler
                         Logger.Debug($@"Найдена задача, ожидающая выполнения - ScheduleID: ""{schedule.Id}""");
                     if (Logger.IsTraceEnabled)
                         Logger.Trace($"Schedule Info: {schedule}");
-                    Type type = AppDomain.CurrentDomain.GetAssemblies().SelectMany(a => a.GetTypes()).FirstOrDefault(t => t.FullName == schedule.TaskHandler);
-                    if (TaskContainer.TryResolve(type, out object t) && t is ATask task)
+                    Type type = AppDomain.CurrentDomain.GetAssemblies().SelectMany(a => a.GetTypes()).FirstOrDefault(t => t.FullName == schedule.ClassHandler);
+                    if (TaskContainer.TryResolve(type, out object t) && t is ALongTermTask task)
                     {
-                        await StartScheduleTaskInStorageAsync(schedule);
+                        await StartLongTermTaskScheduleInStorageAsync(schedule);
                         task.Params = schedule.Parameters;
                         if (await task.TestAsync())
                         {
-                            ActiveTasks.TryAdd(schedule.Id, (task, null));
+                            ActiveLongTermTasks.TryAdd(schedule.Id, (task, null));
                             Task execTask = new Task(async () =>
                             {
-                                await ActiveTasks[schedule.Id].Item1.InvokeAsync(token);
-                                await FinishScheduleTaskAsync(schedule, task);
+                                await ActiveLongTermTasks[schedule.Id].Item1.InvokeAsync(token);
+                                await FinishingLongTermTaskAsync(schedule, task);
                             }, token);
-                            ActiveTasks[schedule.Id] = (ActiveTasks[schedule.Id].Item1, execTask);
-                            ActiveTasks[schedule.Id].Item2.Start();
+                            ActiveLongTermTasks[schedule.Id] = (ActiveLongTermTasks[schedule.Id].Item1, execTask);
+                            ActiveLongTermTasks[schedule.Id].Item2.Start();
                         } else
-                            await FinishScheduleTaskAsync(schedule, task);
+                            await FinishingLongTermTaskAsync(schedule, task);
                     }
                     else
                     {
@@ -174,7 +175,7 @@ namespace SLiTS.Scheduler
                         if (Logger.IsDebugEnabled)
                             Logger.Debug($"Schedule Info: {schedule}");
                         schedule.Repeat = false;
-                        await FinishScheduleTaskAsync(schedule, null);
+                        await FinishingLongTermTaskAsync(schedule, null);
                     }
                 }
                 catch (BaseScheduleException ex)
@@ -191,22 +192,22 @@ namespace SLiTS.Scheduler
         }
         private async Task StartFastTaskSchedulerAsync(CancellationToken token)
         {
-            await foreach(FastTaskRequest request in FastTaskRequestIteratorAsync(token))
+            await foreach(QuickTaskRequest request in QuickTaskRequestIteratorAsync(token))
             {
                 if (FastTaskHandlers.ContainsKey(request.Title))
                 {
                     Task task = new Task(async () =>
-                    {
-                        try
                         {
-                            await SaveFastTaskResponse(await FastTaskHandlers[request.Title].InvokeAsync(request));
-                        }
-                        catch (Exception ex)
-                        {
-                            if (Logger.IsErrorEnabled)
-                                Logger.Error(ex, @$"При выполнении задачи ""{request.Title}"" произошла ошибка");
-                        }
-                    });
+                            try
+                            {
+                                await SaveQuickTaskResponse(await FastTaskHandlers[request.Title].InvokeAsync(request));
+                            }
+                            catch (Exception ex)
+                            {
+                                if (Logger.IsErrorEnabled)
+                                    Logger.Error(ex, @$"При выполнении задачи ""{request.Title}"" произошла ошибка");
+                            }
+                        });
                     task.Start();
                 }
                 else
@@ -218,14 +219,14 @@ namespace SLiTS.Scheduler
             if (Logger.IsTraceEnabled)
                 Logger.Trace("Выполнение быстрых задач прекращено");
         }
-        private async Task FinishScheduleTaskAsync (Schedule schedule, ATask task)
+        private async Task FinishingLongTermTaskAsync(LongTermTaskSchedule schedule, ALongTermTask task)
         {
             if (!schedule.Repeat)
                 schedule.Active = false;
             if (!(task is null))
                 schedule.Parameters = task.Params;
-            await FinishScheduleTaskInStorageAsync(schedule);
-            ActiveTasks.TryRemove(schedule.Id, out _);
+            await FinishLongTermTaskScheduleInStorageAsync(schedule);
+            ActiveLongTermTasks.TryRemove(schedule.Id, out _);
         }
     }
 }

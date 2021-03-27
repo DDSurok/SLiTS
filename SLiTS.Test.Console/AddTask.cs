@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace SLiTS.Test.Console
 {
-    public class AddTask : ATask
+    public class AddTask : ALongTermTask
     {
         private int shiftVal;
         public AddTask(ILogger logger, ISharedPropertyProvider propertyProvider) : base(logger, propertyProvider)

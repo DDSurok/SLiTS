@@ -3,7 +3,6 @@ using SLiTS.Api;
 using System;
 using System.IO;
 using System.Linq;
-using System.Threading.Tasks;
 
 namespace SLiTS.Test.Console
 {
@@ -38,7 +37,7 @@ namespace SLiTS.Test.Console
             configDir.Create();
             foreach (int i in Enumerable.Range(2, 9))
             {
-                FastTaskConfig config = new FastTaskConfig
+                QuickTaskConfig config = new QuickTaskConfig
                 {
                     Title = $"Pow ^{i}",
                     Handler = typeof(PowFastTask).FullName,
@@ -47,19 +46,19 @@ namespace SLiTS.Test.Console
                 File.WriteAllText(Path.Combine(configDir.FullName, $"pow{i}.json"),
                                   JsonConvert.SerializeObject(config));
             }
-            //foreach (int i in Enumerable.Range(20, 80))
-            //{
-            //    foreach (int j in Enumerable.Range(2, 9))
-            //    {
-            //        FastTaskRequest request = new FastTaskRequest
-            //        {
-            //            Title = $"Pow ^{j}",
-            //            Query = i.ToString()
-            //        };
-            //        File.WriteAllText(Path.Combine(storeDir.FullName, $"{System.Guid.NewGuid()}.json"),
-            //                          JsonConvert.SerializeObject(request));
-            //    }
-            //}
+            foreach (int i in Enumerable.Range(20, 80))
+            {
+                foreach (int j in Enumerable.Range(2, 9))
+                {
+                    QuickTaskRequest request = new QuickTaskRequest
+                    {
+                        Title = $"Pow ^{j}",
+                        Query = i.ToString()
+                    };
+                    File.WriteAllText(Path.Combine(storeDir.FullName, $"{Guid.NewGuid()}.json"),
+                                      JsonConvert.SerializeObject(request));
+                }
+            }
             FileInfo propertiesFile = new FileInfo(Path.Combine(rootDir.FullName, "properties.json"));
             if (propertiesFile.Exists)
                 propertiesFile.Delete();
@@ -67,7 +66,7 @@ namespace SLiTS.Test.Console
             tw.WriteLine("shiftCount");
             tw.WriteLine("2");
             tw.Flush();
-            Schedule schedule = new Schedule
+            LongTermTaskSchedule schedule = new LongTermTaskSchedule
             {
                 Active = true,
                 BeginDailyPlan = new TimeSpan(0, 0, 0),
@@ -77,7 +76,7 @@ namespace SLiTS.Test.Console
                 MinimalElapsed = new TimeSpan(0, 1, 0),
                 Parameters = "1",
                 Repeat = true,
-                TaskHandler = typeof(AddTask).FullName,
+                ClassHandler = typeof(AddTask).FullName,
                 Title = "Сдвиг влево",
                 UsingResource = new string[] { "1" },
                 WeeklyPlan = new[]

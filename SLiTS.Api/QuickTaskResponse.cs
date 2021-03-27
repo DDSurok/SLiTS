@@ -2,7 +2,7 @@
 
 namespace SLiTS.Api
 {
-    public class FastTaskResponse
+    public class QuickTaskResponse
     {
         [JsonIgnore]
         public string Id { get; set; }

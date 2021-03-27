@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 
 namespace SLiTS.Api
 {
-    public interface IAsyncStatisticIntercepter<out T> where T : AFastTask
+    public interface IAsyncStatisticIntercepter<out T> where T : AQuickTask
     {
         int Counter { get; }
         int Limit { get; }

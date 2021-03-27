@@ -5,9 +5,9 @@ using System.Threading.Tasks;
 
 namespace SLiTS.Test.Console
 {
-    public class PowFastTask : AFastTask
+    public class PowFastTask : AQuickTask
     {
-        public PowFastTask(ILogger logger, IAsyncStatisticIntercepter<AFastTask> statisticIntercepter, ISharedPropertyProvider propertyProvider)
+        public PowFastTask(ILogger logger, IAsyncStatisticIntercepter<AQuickTask> statisticIntercepter, ISharedPropertyProvider propertyProvider)
             : base(logger, statisticIntercepter, propertyProvider) { }
 
         public override string Title => $"Test fast task digit pow {PowB}";
@@ -16,7 +16,7 @@ namespace SLiTS.Test.Console
 
         public override string Parameters { get => PowB.ToString(); set => PowB = int.Parse(value); }
 
-        public override async Task<FastTaskResponse> InvokeAsync(FastTaskRequest request)
+        public override async Task<QuickTaskResponse> InvokeAsync(QuickTaskRequest request)
         {
             DateTime start = DateTime.Now;
             int input = int.Parse(request.Query);
@@ -29,7 +29,7 @@ namespace SLiTS.Test.Console
                 Delay = DateTime.Now - start,
                 Query = request.Query
             });
-            return new FastTaskResponse { Id = request.Id, Metadata = "", Data = result.ToString() };
+            return new QuickTaskResponse { Id = request.Id, Metadata = "", Data = result.ToString() };
         }
     }
 }

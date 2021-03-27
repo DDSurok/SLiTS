@@ -4,7 +4,7 @@ using System.Data;
 
 namespace SLiTS.Api
 {
-    public class DataResponse : FastTaskResponse
+    public class DataResponse : QuickTaskResponse
     {
         public List<ColumnInfo> Columns { get; set; }
         public List<dynamic> Records { get; set; }
