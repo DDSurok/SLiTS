@@ -99,6 +99,7 @@ namespace SLiTS.Scheduler
         }
         protected abstract Task StartLongTermTaskScheduleInStorageAsync(LongTermTaskSchedule schedule);
         protected abstract Task FinishLongTermTaskScheduleInStorageAsync(LongTermTaskSchedule schedule);
+        protected abstract Task SaveQuickTaskStatistics(string title, StatisticRecord statistic);
         public void Initialize()
         {
             foreach (QuickTaskConfig config in QuickTaskConfigsIterator())
@@ -113,9 +114,7 @@ namespace SLiTS.Scheduler
                 else
                 {
                     if (Logger.IsInfoEnabled)
-                    {
                         Logger.Info($@"Не удалось зарегистрировать обработчик {config.Handler} для задачи {config.Title}.");
-                    }
                 }
             }
         }
@@ -123,9 +122,33 @@ namespace SLiTS.Scheduler
         {
             CancellationTokenSource cancelTokenSource = new CancellationTokenSource();
             CancellationToken token = cancelTokenSource.Token;
-            Task fastTaskScheduler = Task.Run(async () => await StartFastTaskSchedulerAsync(token), token);
-            Task taskScheduler = Task.Run(async () => await StartLongTermTaskScheduler(token), token);
-            await Task.WhenAll(new[] { fastTaskScheduler, taskScheduler });
+            Task quickTaskScheduler = Task.Run(async () => await StartFastTaskSchedulerAsync(token), token);
+            Task longTermTaskScheduler = Task.Run(async () => await StartLongTermTaskScheduler(token), token);
+            Task quickTaskSaveStat = Task.Run(async () => await SaveAllQuickTasksStatistic(token), token);
+            await Task.WhenAll(new[] { quickTaskScheduler, longTermTaskScheduler, quickTaskSaveStat });
+        }
+        private async Task SaveAllQuickTasksStatistic(CancellationToken token)
+        {
+            while (true)
+            {
+                try
+                {
+                    await Task.Delay(10000, token);
+                    if (Logger.IsTraceEnabled)
+                        Logger.Trace(@"Запись статистики исполнения быстрых задач");
+                    foreach (string title in FastTaskHandlers.Keys)
+                    {
+                        if (token.IsCancellationRequested)
+                            break;
+                        await SaveQuickTaskStatistics(title, FastTaskHandlers[title].StatisticIntercepter.Statistic);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    if (Logger.IsFatalEnabled)
+                        Logger.Fatal(ex, "В процессе сохранения статистики исполнения быстрых задач произошла ошибка");
+                }
+            }
         }
         private async Task StartLongTermTaskScheduler(CancellationToken token)
         {
@@ -143,7 +166,7 @@ namespace SLiTS.Scheduler
                     LongTermTaskSchedule schedule = await GetFirstLongTermTaskScheduleFromStorageAsync();
                     if (schedule is null)
                     {
-                        Thread.Sleep(1000);
+                        await Task.Delay(1000, token);
                         continue;
                     }
                     if (Logger.IsDebugEnabled)

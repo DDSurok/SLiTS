@@ -9,5 +9,6 @@ namespace SLiTS.Api
         int Limit { get; }
         Task RegistredFinalAsync(string query, DateTime start, TimeSpan delay, int dataCount);
         Task RegistredFinalAsync(ImplementationRecord record);
+        StatisticRecord Statistic { get; }
     }
 }

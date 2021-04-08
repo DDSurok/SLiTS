@@ -156,5 +156,20 @@ namespace SLiTS.Scheduler.FSProvider
             await File.WriteAllTextAsync(filePath, JsonConvert.SerializeObject(scheduleInStorage));
             File.Delete(lockPath);
         }
+        protected override async Task SaveQuickTaskStatistics(string title, StatisticRecord statistic)
+        {
+            string fName = Path.Combine(ConfigDirectory,
+                                        $@"{new string(title.Where(c => !Path.GetInvalidPathChars().Contains(c)).ToArray())}.stat");
+            if (File.Exists(fName))
+                File.Delete(fName);
+            await File.WriteAllLinesAsync(fName,
+                               new[] {
+                                   title,
+                                   $"{statistic.Count}",
+                                   $"{statistic.AvgDelay}",
+                                   $"{statistic.LastRun:R}",
+                                   $"{statistic.AvgDataCount}"
+                               });
+        }
     }
 }
